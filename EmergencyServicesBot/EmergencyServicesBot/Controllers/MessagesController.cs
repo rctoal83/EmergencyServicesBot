@@ -1,12 +1,15 @@
-﻿using System;
-using System.Linq;
-using System.Net;
-using System.Net.Http;
+﻿using System.Web.Http;
 using System.Threading.Tasks;
-using System.Web.Http;
-using System.Web.Http.Description;
 using Microsoft.Bot.Connector;
-using Newtonsoft.Json;
+using Microsoft.Bot.Builder.FormFlow;
+using Microsoft.Bot.Builder.Dialogs;
+using System.Web.Http.Description;
+using System.Net.Http;
+using System.Diagnostics;
+using EmergencyServicesBot.Controllers;
+using System;
+using System.Net;
+using Microsoft.Bot.Builder.FormFlow.Advanced;
 
 namespace EmergencyServicesBot
 {
@@ -21,13 +24,15 @@ namespace EmergencyServicesBot
         {
             if (activity.Type == ActivityTypes.Message)
             {
-                ConnectorClient connector = new ConnectorClient(new Uri(activity.ServiceUrl));
+                await Conversation.SendAsync(activity, MakeRoot);
+
+                /*ConnectorClient connector = new ConnectorClient(new Uri(activity.ServiceUrl));
                 // calculate something for us to return
                 int length = (activity.Text ?? string.Empty).Length;
 
                 // return our reply to the user
                 Activity reply = activity.CreateReply($"You sent {activity.Text} which was {length} characters");
-                await connector.Conversations.ReplyToActivityAsync(reply);
+                await connector.Conversations.ReplyToActivityAsync(reply);*/
             }
             else
             {
@@ -35,6 +40,29 @@ namespace EmergencyServicesBot
             }
             var response = Request.CreateResponse(HttpStatusCode.OK);
             return response;
+        }
+
+        internal static IDialog<PoliceEmergencyDetails> MakeRoot()
+        {
+            return Chain.From(() => FormDialog.FromForm(MessagesController.BuildForm));
+        }
+
+        private static IForm<PoliceEmergencyDetails> BuildForm()
+        {
+            var builder = new FormBuilder<PoliceEmergencyDetails>();
+
+            return builder
+                .Message("What kind of incident occurred?")
+                .Field(nameof(PoliceEmergencyDetails.IncidentType))
+                .Message("Where did the incident happen?")
+                .Field(nameof(PoliceEmergencyDetails.IncidentPostCode))
+                .Field(nameof(PoliceEmergencyDetails.IncidentHouseNumberOrName))
+                .Message("What's your contact details?")
+                .Field(nameof(PoliceEmergencyDetails.ReporteeName))
+                .Field(nameof(PoliceEmergencyDetails.ReporteePostCode))
+                .Field(nameof(PoliceEmergencyDetails.ReporteeHouseNumberOrName))
+                .Field(nameof(PoliceEmergencyDetails.ReporteePhoneNumber))
+                .Build();
         }
 
         private Activity HandleSystemMessage(Activity message)
